@@ -38,37 +38,59 @@ pageEncoding="UTF-8"%>
 
 <%
 
-Class.forName("com.mysql.cj.jdbc.Driver");
+try {
+    Class.forName("com.mysql.cj.jdbc.Driver");
 
-Connection con = DriverManager.getConnection(
-"jdbc:mysql://localhost:3306/moviedb",
-"root",
-""
-);
+    // ==========================================
+    // 🔥 UPDATED: Use environment variables
+    // ==========================================
+    
+    String dbHost = System.getenv("DB_HOST");
+    String dbPort = System.getenv("DB_PORT");
+    String dbName = System.getenv("DB_NAME");
+    String dbUser = System.getenv("DB_USER");
+    String dbPassword = System.getenv("DB_PASSWORD");
+    
+    String url, user, pass;
+    
+    if (dbHost != null && !dbHost.isEmpty()) {
+        // Production - Aiven (on Render)
+        url = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + 
+              "?useSSL=true&requireSSL=true&serverTimezone=UTC";
+        user = dbUser;
+        pass = dbPassword;
+    } else {
+        // Local Development
+        url = "jdbc:mysql://localhost:3306/moviedb?useSSL=false&serverTimezone=UTC";
+        user = "root";
+        pass = "";
+    }
 
-/* Remove Favourite */
+    Connection con = DriverManager.getConnection(url, user, pass);
 
-if(request.getParameter("remove")!=null){
+    /* Remove Favourite */
 
-    int id=Integer.parseInt(request.getParameter("remove"));
+    if(request.getParameter("remove")!=null){
 
-    PreparedStatement ps=con.prepareStatement(
-    "UPDATE movies SET favourite=0 WHERE id=?"
+        int id=Integer.parseInt(request.getParameter("remove"));
+
+        PreparedStatement ps=con.prepareStatement(
+        "UPDATE movies SET favourite=0 WHERE id=?"
+        );
+
+        ps.setInt(1,id);
+
+        ps.executeUpdate();
+
+        response.sendRedirect("favourite.jsp");
+        return;
+    }
+
+    Statement st=con.createStatement();
+
+    ResultSet rs=st.executeQuery(
+    "SELECT * FROM movies WHERE favourite=1"
     );
-
-    ps.setInt(1,id);
-
-    ps.executeUpdate();
-
-    response.sendRedirect("favourite.jsp");
-    return;
-}
-
-Statement st=con.createStatement();
-
-ResultSet rs=st.executeQuery(
-"SELECT * FROM movies WHERE favourite=1"
-);
 
 %>
 
@@ -149,6 +171,12 @@ class="btn">
 }
 
 con.close();
+
+} catch (Exception e) {
+    out.println("<p style='color:#ff8080;text-align:center;'>❌ Error: " + e.getMessage() + "</p>");
+    System.err.println("❌ Favourite Error: " + e.getMessage());
+    e.printStackTrace();
+}
 
 %>
 

@@ -61,27 +61,49 @@ class="btn">
 
 if(request.getMethod().equalsIgnoreCase("POST")){
 
-String title=request.getParameter("title");
+    String title = request.getParameter("title");
 
-Class.forName("com.mysql.cj.jdbc.Driver");
+    try {
+        Class.forName("com.mysql.cj.jdbc.Driver");
 
-Connection con=DriverManager.getConnection(
-"jdbc:mysql://localhost:3306/moviedb",
-"root",
-""
-);
+        // ==========================================
+        // 🔥 UPDATED: Use environment variables
+        // ==========================================
+        
+        String dbHost = System.getenv("DB_HOST");
+        String dbPort = System.getenv("DB_PORT");
+        String dbName = System.getenv("DB_NAME");
+        String dbUser = System.getenv("DB_USER");
+        String dbPassword = System.getenv("DB_PASSWORD");
+        
+        String url, user, pass;
+        
+        if (dbHost != null && !dbHost.isEmpty()) {
+            // Production - Aiven (on Render)
+            url = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + 
+                  "?useSSL=true&requireSSL=true&serverTimezone=UTC";
+            user = dbUser;
+            pass = dbPassword;
+        } else {
+            // Local Development
+            url = "jdbc:mysql://localhost:3306/moviedb?useSSL=false&serverTimezone=UTC";
+            user = "root";
+            pass = "";
+        }
 
-PreparedStatement ps = con.prepareStatement(
-"SELECT * FROM movies WHERE title LIKE ?"
-);
+        Connection con = DriverManager.getConnection(url, user, pass);
 
-ps.setString(1, "%" + title + "%");
+        PreparedStatement ps = con.prepareStatement(
+            "SELECT * FROM movies WHERE title LIKE ?"
+        );
 
-ResultSet rs=ps.executeQuery();
+        ps.setString(1, "%" + title + "%");
 
-if(rs.next()){
+        ResultSet rs = ps.executeQuery();
 
-String genre=rs.getString("genre");
+        if(rs.next()){
+
+            String genre = rs.getString("genre");
 
 %>
 
@@ -119,7 +141,7 @@ String genre=rs.getString("genre");
 
 <%
 
-int rating=(int)rs.getDouble("rating");
+int rating = (int)rs.getDouble("rating");
 
 for(int i=1;i<=5;i++){
 
@@ -137,7 +159,7 @@ out.print("☆");
 
 <span style="color:white;font-size:15px;">
 
-(<%=rating%>/10)
+(<%=rs.getDouble("rating")%>/10)
 
 </span>
 
@@ -200,22 +222,22 @@ class="btn">
 
 <%
 
-PreparedStatement rec=con.prepareStatement(
+PreparedStatement rec = con.prepareStatement(
 
 "SELECT * FROM movies WHERE genre=? AND title<>?"
 
 );
 
-rec.setString(1,genre);
-rec.setString(2,title);
+rec.setString(1, genre);
+rec.setString(2, title);
 
-ResultSet recRs=rec.executeQuery();
+ResultSet recRs = rec.executeQuery();
 
-boolean found=false;
+boolean found = false;
 
 while(recRs.next()){
 
-found=true;
+found = true;
 
 %>
 
@@ -249,7 +271,7 @@ found=true;
 
 <%
 
-int r=(int)recRs.getDouble("rating");
+int r = (int)recRs.getDouble("rating");
 
 for(int i=1;i<=5;i++){
 
@@ -267,7 +289,7 @@ out.print("☆");
 
 <span style="color:white;font-size:15px;">
 
-(<%=recRs.getDouble("rating")%>/5)
+(<%=recRs.getDouble("rating")%>/10)
 
 </span>
 
@@ -336,7 +358,16 @@ if(!found){
 
 }
 
-}else{
+recRs.close();
+rec.close();
+
+%>
+
+</div>
+
+<%
+
+} else {
 
 %>
 
@@ -350,7 +381,15 @@ Movie Not Found
 
 }
 
+rs.close();
+ps.close();
 con.close();
+
+} catch (Exception e) {
+    out.println("<p style='color:#ff8080;text-align:center;'>❌ Error: " + e.getMessage() + "</p>");
+    System.err.println("❌ Search Error: " + e.getMessage());
+    e.printStackTrace();
+}
 
 }
 

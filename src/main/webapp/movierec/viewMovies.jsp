@@ -42,19 +42,41 @@ pageEncoding="UTF-8"%>
 
 <%
 
-Class.forName("com.mysql.cj.jdbc.Driver");
+try {
+    Class.forName("com.mysql.cj.jdbc.Driver");
 
-Connection con=DriverManager.getConnection(
-"jdbc:mysql://localhost:3306/moviedb",
-"root",
-""
-);
+    // ==========================================
+    // 🔥 UPDATED: Use environment variables
+    // ==========================================
+    
+    String dbHost = System.getenv("DB_HOST");
+    String dbPort = System.getenv("DB_PORT");
+    String dbName = System.getenv("DB_NAME");
+    String dbUser = System.getenv("DB_USER");
+    String dbPassword = System.getenv("DB_PASSWORD");
+    
+    String url, user, pass;
+    
+    if (dbHost != null && !dbHost.isEmpty()) {
+        // Production - Aiven (on Render)
+        url = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + 
+              "?useSSL=true&requireSSL=true&serverTimezone=UTC";
+        user = dbUser;
+        pass = dbPassword;
+    } else {
+        // Local Development
+        url = "jdbc:mysql://localhost:3306/moviedb?useSSL=false&serverTimezone=UTC";
+        user = "root";
+        pass = "";
+    }
 
-Statement st=con.createStatement();
+    Connection con = DriverManager.getConnection(url, user, pass);
 
-ResultSet rs=st.executeQuery("SELECT * FROM movies");
+    Statement st = con.createStatement();
 
-while(rs.next()){
+    ResultSet rs = st.executeQuery("SELECT * FROM movies ORDER BY id");
+
+    while(rs.next()){
 
 %>
 
@@ -166,7 +188,15 @@ class="btn">
 
 }
 
+rs.close();
+st.close();
 con.close();
+
+} catch (Exception e) {
+    out.println("<p style='color:#ff8080;text-align:center;'>❌ Error loading movies: " + e.getMessage() + "</p>");
+    System.err.println("❌ View Movies Error: " + e.getMessage());
+    e.printStackTrace();
+}
 
 %>
 

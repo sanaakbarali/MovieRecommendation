@@ -129,46 +129,69 @@ class="btn">
 
 if(request.getMethod().equalsIgnoreCase("POST")){
 
-String title=request.getParameter("title");
-String genre=request.getParameter("genre");
-String language=request.getParameter("language");
+    String title = request.getParameter("title");
+    String genre = request.getParameter("genre");
+    String language = request.getParameter("language");
+    int year = Integer.parseInt(request.getParameter("year"));
+    double rating = Double.parseDouble(request.getParameter("rating"));
+    String image = request.getParameter("image");
+    String synopsis = request.getParameter("synopsis");
 
-int year=Integer.parseInt(request.getParameter("year"));
+    try {
+        Class.forName("com.mysql.cj.jdbc.Driver");
 
-double rating=Double.parseDouble(request.getParameter("rating"));
+        // ==========================================
+        // 🔥 UPDATED: Use environment variables
+        // ==========================================
+        
+        String dbHost = System.getenv("DB_HOST");
+        String dbPort = System.getenv("DB_PORT");
+        String dbName = System.getenv("DB_NAME");
+        String dbUser = System.getenv("DB_USER");
+        String dbPassword = System.getenv("DB_PASSWORD");
+        
+        String url, user, pass;
+        
+        if (dbHost != null && !dbHost.isEmpty()) {
+            // Production - Aiven (on Render)
+            url = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + 
+                  "?useSSL=true&requireSSL=true&serverTimezone=UTC";
+            user = dbUser;
+            pass = dbPassword;
+        } else {
+            // Local Development
+            url = "jdbc:mysql://localhost:3306/moviedb?useSSL=false&serverTimezone=UTC";
+            user = "root";
+            pass = "";
+        }
 
-String image=request.getParameter("image");
+        Connection con = DriverManager.getConnection(url, user, pass);
 
-String synopsis=request.getParameter("synopsis");
+        PreparedStatement ps = con.prepareStatement(
 
-Class.forName("com.mysql.cj.jdbc.Driver");
+            "INSERT INTO movies(title,genre,language,release_year,rating,image_url,synopsis,favourite) VALUES(?,?,?,?,?,?,?,0)"
 
-Connection con=DriverManager.getConnection(
-"jdbc:mysql://localhost:3306/moviedb",
-"root",
-""
-);
+        );
 
-PreparedStatement ps=con.prepareStatement(
+        ps.setString(1, title);
+        ps.setString(2, genre);
+        ps.setString(3, language);
+        ps.setInt(4, year);
+        ps.setDouble(5, rating);
+        ps.setString(6, image);
+        ps.setString(7, synopsis);
 
-"INSERT INTO movies(title,genre,language,release_year,rating,image_url,synopsis,favourite) VALUES(?,?,?,?,?,?,?,0)"
+        ps.executeUpdate();
 
-);
+        con.close();
 
-ps.setString(1,title);
-ps.setString(2,genre);
-ps.setString(3,language);
-ps.setInt(4,year);
-ps.setDouble(5,rating);
-ps.setString(6,image);
-ps.setString(7,synopsis);
+        out.println("<p style='color:#10b981;text-align:center;'>✅ Movie Added Successfully!</p>");
 
-ps.executeUpdate();
-
-con.close();
-
-out.println("<p style='color:#10b981;text-align:center;'>Movie Added Successfully!</p>");
-
+    } catch (Exception e) {
+        out.println("<p style='color:#ff8080;text-align:center;'>❌ Error: " + e.getMessage() + "</p>");
+        System.err.println("❌ Add Movie Error: " + e.getMessage());
+        e.printStackTrace();
+    }
 }
 
 %>

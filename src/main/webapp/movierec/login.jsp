@@ -104,11 +104,38 @@ if(request.getMethod().equalsIgnoreCase("POST")){
 
         Class.forName("com.mysql.cj.jdbc.Driver");
 
-        Connection con = DriverManager.getConnection(
-        "jdbc:mysql://localhost:3306/login_db",
-        "root",
-        ""
-        );
+        // ==========================================
+        // 🔥 UPDATED: Use environment variables
+        // ==========================================
+        
+        String dbHost = System.getenv("DB_HOST");
+        String dbPort = System.getenv("DB_PORT");
+        String dbName = System.getenv("DB_NAME");
+        String dbUser = System.getenv("DB_USER");
+        String dbPassword = System.getenv("DB_PASSWORD");
+        
+        String url, user, pass;
+        
+        if (dbHost != null && !dbHost.isEmpty()) {
+            // Production - Aiven (on Render)
+            url = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + 
+                  "?useSSL=true&requireSSL=true&serverTimezone=UTC";
+            user = dbUser;
+            pass = dbPassword;
+            
+            System.out.println("✅ Connecting to Aiven Production Database");
+            System.out.println("   Host: " + dbHost);
+            System.out.println("   Database: " + dbName);
+        } else {
+            // Local Development (your computer)
+            url = "jdbc:mysql://localhost:3306/login_db?useSSL=false&serverTimezone=UTC";
+            user = "root";
+            pass = "";
+            
+            System.out.println("✅ Connecting to Local Database");
+        }
+
+        Connection con = DriverManager.getConnection(url, user, pass);
 
         PreparedStatement ps = con.prepareStatement(
         "SELECT * FROM users WHERE username=? AND password=? AND role=?"
@@ -137,7 +164,9 @@ if(request.getMethod().equalsIgnoreCase("POST")){
 
     } catch(Exception e){
 
-        out.println(e);
+        out.println("<p style='color:#ff8080;text-align:center;'>Error: " + e.getMessage() + "</p>");
+        System.err.println("❌ Login Error: " + e.getMessage());
+        e.printStackTrace();
 
     }
 }

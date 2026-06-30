@@ -72,37 +72,60 @@ Already have an account?
 
 if(request.getMethod().equalsIgnoreCase("POST")){
 
-String username=request.getParameter("username");
-String password=request.getParameter("password");
+    String username = request.getParameter("username");
+    String password = request.getParameter("password");
 
-try{
+    try {
 
-Class.forName("com.mysql.cj.jdbc.Driver");
+        Class.forName("com.mysql.cj.jdbc.Driver");
 
-Connection con=DriverManager.getConnection(
-"jdbc:mysql://localhost:3306/login_db",
-"root",
-""
-);
+        // ==========================================
+        // 🔥 UPDATED: Use environment variables
+        // ==========================================
+        
+        String dbHost = System.getenv("DB_HOST");
+        String dbPort = System.getenv("DB_PORT");
+        String dbName = System.getenv("DB_NAME");
+        String dbUser = System.getenv("DB_USER");
+        String dbPassword = System.getenv("DB_PASSWORD");
+        
+        String url, user, pass;
+        
+        if (dbHost != null && !dbHost.isEmpty()) {
+            // Production - Aiven (on Render)
+            url = "jdbc:mysql://" + dbHost + ":" + dbPort + "/" + dbName + 
+                  "?useSSL=true&requireSSL=true&serverTimezone=UTC";
+            user = dbUser;
+            pass = dbPassword;
+        } else {
+            // Local Development
+            url = "jdbc:mysql://localhost:3306/login_db?useSSL=false&serverTimezone=UTC";
+            user = "root";
+            pass = "";
+        }
 
-PreparedStatement ps=con.prepareStatement(
-"INSERT INTO users(username,password) VALUES(?,?)"
-);
+        Connection con = DriverManager.getConnection(url, user, pass);
 
-ps.setString(1,username);
-ps.setString(2,password);
+        PreparedStatement ps = con.prepareStatement(
+            "INSERT INTO users(username, password, role) VALUES(?, ?, 'USER')"
+        );
 
-ps.executeUpdate();
+        ps.setString(1, username);
+        ps.setString(2, password);
 
-con.close();
+        ps.executeUpdate();
 
-response.sendRedirect("login.jsp?msg=registered");
+        con.close();
 
-}catch(Exception e){
+        response.sendRedirect("login.jsp?msg=registered");
 
-out.println("<p style='color:#ff8080;text-align:center;'>"+e+"</p>");
+    } catch (Exception e) {
 
-}
+        out.println("<p style='color:#ff8080;text-align:center;'>❌ Error: " + e.getMessage() + "</p>");
+        System.err.println("❌ Registration Error: " + e.getMessage());
+        e.printStackTrace();
+
+    }
 
 }
 
