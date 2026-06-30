@@ -1,8 +1,20 @@
+# ---------- Build Stage ----------
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
+
+WORKDIR /app
+
+COPY pom.xml .
+
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
+# ---------- Run Stage ----------
 FROM tomcat:9.0-jdk17
 
 RUN rm -rf /usr/local/tomcat/webapps/*
 
-COPY target/MovieRecommendation.war /usr/local/tomcat/webapps/ROOT.war
+COPY --from=builder /app/target/MovieRecommendation.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
 
